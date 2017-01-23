@@ -249,12 +249,60 @@ function findEntrys(searchterm, fuzzy, printTime, showGerman, showEnglish) {
         queries.forEach((query) => {promises.push(getEntryIds(hit_entseq, query, searchterm, printTime))})
     }
 
+    let searchDb = require('serverless-search').searchDb()
+    let query = {
+            search: {
+            term:'偉容',
+            path:'kanji[].text',
+            levenshtein_distance:0,
+            firstCharExactMatch:true
+        }
+    }
+
+
     if (containsKanji(searchterm)){
-        addQueries([KANJI_QUERY, CONJUGATED_KANJI, CONJUGATED_KANA])
+        query = {
+            search: {
+                term: searchterm
+                path:'kanji[].text',
+                levenshtein_distance:0,
+                firstCharExactMatch:true
+            },
+            boost: {
+                path:'kanji[].commonness',
+                fun:Math.log,
+                param: 1
+            }
+        }
     }else if(containsKana(searchterm)){
-        console.log("JAAAA")
-        addQueries([KANJI_QUERY, KANA_QUERY, CONJUGATED_KANA])
+        query = {
+                search: {
+                term: searchterm
+                path:'kana[].text',
+                levenshtein_distance:1,
+                firstCharExactMatch:true
+            },
+            boost: {
+                path:'kana[].commonness',
+                fun:Math.log,
+                param: 1
+            }
+        }
     }else {
+        query = {
+                search: {
+                term: searchterm
+                path:'kana[].text',
+                levenshtein_distance:1,
+                firstCharExactMatch:true
+            },
+            boost: {
+                path:'kana[].commonness',
+                fun:Math.log,
+                param: 1
+            }
+        }
+        
         let ROMAJI_QUERY = function(searchterm){return `SELECT romaji as hit, ent_seq FROM kanas WHERE romaji ${method}'${searchterm}'`}
         let MEANING_QUERY = function(searchterm){ 
             let query = `SELECT meaning as hit, ent_seq FROM meanings WHERE meaning ${method}${searchterm} `
@@ -267,6 +315,13 @@ function findEntrys(searchterm, fuzzy, printTime, showGerman, showEnglish) {
             addQueries([ROMAJI_QUERY(umlautConverted), MEANING_QUERY(umlautConverted)])
         }
     }
+
+    return searchDb.searchDb('jmdict', ).then(res => {
+        // console.log(JSON.stringify(res, null, 2))
+        return res
+    })
+    .should.eventually.have.length(1)
+
 
     if (printTime) taim('FindIds',Promise.all(promises))
 
@@ -340,69 +395,6 @@ function getEntryIds(hit_entseq, sqlquery, searchterm) {
     })
 
 }
-
-function getEntries(ent_seqs, query, printTime, showGerman, showEnglish) {
-
-    let meanings = getMeanings(ent_seqs, showGerman, showEnglish)
-    let kanjis = getKanjis(ent_seqs)
-    let kanas = getKanas(ent_seqs)
-
-    if (printTime) taim('getEntriesForId',Promise.all([meanings, kanjis, kanas]))
-
-    return Promise.all([meanings, kanjis, kanas]).then(() => {
-        // console.log(JSON.stringify(ent_seqs, null, 2))
-        let results = _.values(ent_seqs)
-        let readingsProm = addReadingsToEntries(results)
-        if (printTime) taim('AddReadingsToEntries',readingsProm)
-
-        return Promise.all([readingsProm, addMisc(results)]).then(()=>{
-            return results
-        })
-
-    }).then((results)=>{
-        prepareEntries(results)
-        return results
-    })
-    
-
-}
-
-function addReadingsToEntries(entries){
-    let promises = []
-    for(let entry of entries){
-        for(let kanji of entry.kanjis){
-            let prom = db.eachAsync(KANJI_READINGS,  [kanji.text, entry.ent_seq+''])
-            promises.push(prom)
-            prom.then(function(row){
-                let kanaForString = entry.getKanaForString(row.kana)
-                if (kanaForString == null){
-                    console.log('Kana not Found ' + row.kana )
-                }else{
-                    kanji.readings.push(kanaForString)
-                }
-            })
-        }
-    }
-    return Promise.all(promises)
-
-}
-
-function addMisc(entries){
-    let MISC_FOR_ENTRY  =  `Select misc FROM misc m
-                        JOIN (Select misc_id from entry_misc WHERE ent_seq = ? ) a ON a.misc_id = m._id`
-    let promises = []
-    for(let entry of entries){
-        let prom = db.allAsync(MISC_FOR_ENTRY, [entry.ent_seq])
-        // console.log(entry.ent_seq)
-        promises.push(prom)
-        prom.then((rows) => { rows.forEach((row) => {entry.misc.push(row.misc)}) })
-        .error((err)=>{console.log(err)})
-    }
-    return Promise.all(promises)
-
-}
-
-
 function addLanguageFilter(sqlquery, showGerman, showEnglish){
     if (showEnglish && showGerman) return sqlquery
 
