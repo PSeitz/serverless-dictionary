@@ -224,10 +224,8 @@ function getQuery(searchterm){
             boost: { path:'kana[].commonness', fun:Math.log, param: 1 }
         }
     }else {
-        // let orquery = [{search: qpPart(searchterm, 'meanings.eng[]', 1)},
-        //                {search: qpPart(searchterm, 'meanings.ger[]', 1)}]
-
-        let orquery = [{search: qpPart(searchterm, 'meanings.ger[]', 1)}]
+        let orquery = [{search: qpPart(searchterm, 'meanings.eng[]', 1)},
+                       {search: qpPart(searchterm, 'meanings.ger[]', 1)}]
 
         if (hasUmlautLikeCharacter(searchterm.toLowerCase())){
             let converted = convertUmlautLikeCharacter(searchterm.toLowerCase())
@@ -250,7 +248,7 @@ function findEntrys(searchterm, printTime) {
     console.time("asdf")
     let searchPromise =  searchDb.searchDb('jmdict', query).then(res => {
         console.timeEnd("asdf")
-        // console.log(JSON.stringify(res, null, 2))
+        console.log(JSON.stringify(res.map(el => el.meanings.ger), null, 2))
         return res
     })
 
