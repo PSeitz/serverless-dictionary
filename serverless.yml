@@ -45,17 +45,28 @@ provider:
 #    variable1: value1
 
 # you can add packaging information here
-#package:
+package:
 #  include:
 #    - include-me.js
 #    - include-me-dir/**
-#  exclude:
-#    - exclude-me.js
+ exclude:
+   - jmdict.json
 #    - exclude-me-dir/**
 
+
 functions:
-  hello:
-    handler: handler.hello
+  search:
+    handler: queries.search
+    events:
+      - http: GET search
+    # events:
+    #   - http:
+    #       path: {search}
+    #       method: get
+    #       request: 
+    #       parameters: 
+    #          paths: 
+    #            search: true
 
 #    The following are a few example events you can configure
 #    NOTE: Please make sure to change your handler code to work with those events
