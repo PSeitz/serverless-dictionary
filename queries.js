@@ -34,15 +34,15 @@ function convertUmlautLikeCharacter(orig){
 let usingKana = 'word usually written using kana alone'
 
 function qpPart(searchterm, path, levenshtein_distance){
-  levenshtein_distance = levenshtein_distance || 0
+    levenshtein_distance = levenshtein_distance || 0
     return {
-            term: searchterm,
-            path:path,
-            levenshtein_distance:levenshtein_distance,
-            firstCharExactMatch:true,
-            startsWith:true,
-            operator:'some'
-        }
+        term: searchterm,
+        path:path,
+        levenshtein_distance:levenshtein_distance,
+        firstCharExactMatch:true,
+        startsWith:true,
+        operator:'some'
+    }
 }
 
 function getQuery(searchterm){
@@ -90,9 +90,6 @@ function findEntrys(searchterm, printTime) {
 }
 
 function getSuggestions(query) {
-    getSuggestionsCursor(query).then(function(rows){
-        return rows
-    })
 }
 
 
