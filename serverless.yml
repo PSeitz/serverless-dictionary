@@ -18,12 +18,13 @@ service: j-ibiki # japanese ibiki
 # frameworkVersion: "=X.X.X"
 
 provider:
+  memorySize: 128
   name: aws
   runtime: nodejs4.3
 
 # you can overwrite defaults here
 #  stage: dev
-#  region: us-east-1
+  region: eu-west-1
 
 # you can add statements to the Lambda function's IAM Role here
 #  iamRoleStatements:
@@ -51,11 +52,18 @@ package:
 #    - include-me-dir/**
  exclude:
    - jmdict.json
+   - de_50k.txt
 #    - exclude-me-dir/**
 
 
 functions:
+  mySkill:
+    memorySize: 128
+    handler: queries.alexa
+    events:
+      - alexaSkill
   search:
+    memorySize: 128
     handler: queries.search
     events:
       - http: GET search

@@ -1,0 +1,30 @@
+japanisch {tehwort}
+japanisch übersetze {tehwort}
+japanisch übersetze mit dem {tehwort}
+japanisch übersetze auf japanisch {tehwort}
+japanisch was heißt {tehwort}
+japanisch was {tehwort} heißt
+japanisch was bedeutet {tehwort}
+japanisch was {tehwort} bedeutet
+japanisch {tehwort} auf japanisch heißt
+japanisch was {tehwort} auf japanisch heißt
+japanisch was {tehwort} heißt
+japanisch nach {tehwort}
+japanisch schlage nach was {tehwort} heißt
+japanisch nach der Übersetzung für {tehwort}
+japanisch schlage nach {tehwort}
+
+
+{
+  "intents": [
+    {
+      "intent": "japanisch",
+      "slots": [
+        {
+          "name": "tehwort",
+          "type": "ALLWORDS"
+        }
+      ]
+    }
+  ]
+}

@@ -45,7 +45,8 @@ function qpPart(searchterm, path, levenshtein_distance){
     }
 }
 
-function getQuery(searchterm){
+function getQuery(searchterm, lang, levenshtein_distance){
+    levenshtein_distance = levenshtein_distance || 0
     if (containsKanji(searchterm)){
         return {
             search: qpPart(searchterm, 'kanji[].text'),
@@ -57,25 +58,35 @@ function getQuery(searchterm){
             boost: { path:'kana[].commonness', fun:Math.log, param: 1 }
         }
     }else {
-        let orquery = [{search: qpPart(searchterm, 'meanings.eng[]', 1)},
-                       {search: qpPart(searchterm, 'meanings.ger[]', 1)}]
+        let orquery = [ ]
+        let addDe = (lang === 'de' || !lang)
+        if (addDe)
+            orquery.push({search: qpPart(searchterm, 'meanings.ger[]', levenshtein_distance), boost: { path:'commonness', fun:Math.log, param: 1}})
 
-        if (hasUmlautLikeCharacter(searchterm.toLowerCase())){
+        if (lang === 'en'|| !lang)
+            orquery.push({search: qpPart(searchterm, 'meanings.eng[]', levenshtein_distance), boost: { path:'commonness', fun:Math.log, param: 1}})
+
+        if (addDe && hasUmlautLikeCharacter(searchterm.toLowerCase())){
             let converted = convertUmlautLikeCharacter(searchterm.toLowerCase())
-            orquery.push({search: qpPart(converted, 'meanings.ger[]', 1)})
+            orquery.push({search: qpPart(converted, 'meanings.ger[]', levenshtein_distance),
+                boost: { path:'commonness', fun:Math.log, param: 1}})
         }
-        return { OR:orquery}
+        return {OR:orquery}
     }
 }
 
-// findEntrys('majestät', true)
+// findEntrys('haus', true)
 
-// findEntrys('having a long torso', true).then(res => {
-//     console.log(JSON.stringify(res, null, 2))
+// findEntrys('weich', 'de', 1, true).then(res => {
+//     console.log(JSON.stringify(res[0], null, 2))
 // })
 
 
-function findEntrys(searchterm, printTime) {
+// findEntrys('fenster', 'de', 0, true).then(res => {
+//     console.log(JSON.stringify(res[0], null, 2))
+// })
+
+function findEntrys(searchterm, lang, levenshtein_distance, printTime) {
     searchterm  = searchterm.trim()
 
     let startTime = process.hrtime()
@@ -109,7 +120,7 @@ module.exports.search = (event, context, callback) => {
     let request = event.queryStringParameters
     console.log(request)
     // TODO implement
-    findEntrys(request.searchterm, request.printTime).then(entries => {
+    findEntrys(request.searchterm, undefined, 0, request.printTime).then(entries => {
 
         let response = {
             "statusCode": 200,
@@ -120,6 +131,49 @@ module.exports.search = (event, context, callback) => {
         callback(null, response)
     })
 }
+
+
+module.exports.alexa = (event, context, callback) => {
+    const tehwort = event.request.intent.slots.tehwort.value
+
+    findEntrys(tehwort, 'de', 0,  true).then(entries => {
+        if (entries.length === 0) {
+            const response = {
+                version: '1.0',
+                response: {
+                    outputSpeech: {
+                        type: 'PlainText',
+                        text: `zoory echt, ich hab nichts gefunden für ${tehwort}`
+                    },
+                },
+            }
+            callback(null, response)
+        }else {
+            let japanisch = entries[0].kana[0].romaji
+            japanisch = japanisch.toLowerCase()
+            japanisch = japanisch.replace('ie', 'iä')
+            japanisch = japanisch.replace('ji', 'dschy')
+            console.log(entries[0])
+            const response = {
+                version: '1.0',
+                response: {
+                    outputSpeech: {
+                        type: 'PlainText',
+                        text: `${tehwort} auf japanisch ist: ${japanisch}`
+                    },
+                },
+            }
+            console.log(response)
+            callback(null, response)
+        }
+        
+        
+    })
+}
+
+
+// let event = {request:{intent:{slots:{tehwort:{value:"angeben"}}}}}
+// module.exports.alexa( event, {}, () => {})
 
 
 // {
