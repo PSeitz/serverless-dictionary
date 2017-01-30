@@ -77,22 +77,27 @@ function getQuery(searchterm, lang, levenshtein_distance){
 
 // findEntrys('haus', true)
 
-// findEntrys('weich', 'de', 1, true).then(res => {
-//     console.log(JSON.stringify(res[0], null, 2))
-// })
+findEntrys('weich', 'de', 1, true).then(res => {
+    console.log(JSON.stringify(res[1], null, 2))
+})
 
 
 // findEntrys('fenster', 'de', 0, true).then(res => {
-//     console.log(JSON.stringify(res[0], null, 2))
+//     // console.log(JSON.stringify(res[0], null, 2))
 // })
+
+// findEntrys('とある', 'de', 0, true).then(res => {
+//     console.log(JSON.stringify(res[0], null, 2))
+//     console.log(JSON.stringify(res[1], null, 2))
+// })
+
 
 function findEntrys(searchterm, lang, levenshtein_distance, printTime) {
     searchterm  = searchterm.trim()
-
     let startTime = process.hrtime()
 
     let searchDb = require('serverless-search').searchdb()
-    let query = getQuery(searchterm)
+    let query = getQuery(searchterm, lang, levenshtein_distance)
 
     return searchDb.searchDb('jmdict', query).then(function(res){
         if (printTime)console.log('Query: ' +  process.hrtime(startTime)[1]/1000000 + ' ms.')
@@ -104,14 +109,6 @@ function getSuggestions(query) {
 }
 
 
-// function startSearch(){
-//     findEntrys('Geisterhaus')
-//     findEntrys('book').then(function(entries){
-//         console.log(JSON.stringify(entries, null, 2))
-//     })
-//     findEntrys('どうながたんそく')
-// }
-// startSearch()
 
 module.exports.search = (event, context, callback) => {
 

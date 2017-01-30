@@ -34,7 +34,7 @@ var schema = {
 
 return database.createDatabaseFromFile('jmdict.json', 'jmdict',  [
     { boost:'commonness' , options:{type:'int'}},
-    { fulltext:'entseq' },
+    // { fulltext:'ent_seq' },
     { fulltext:'kanji[].text' }, 
     { fulltext:'kana[].text' }, 
     // { fulltext:'kana[].text' }, 
