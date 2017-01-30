@@ -1,7 +1,7 @@
 let fs = require('fs')
 
 function isASCII(str) {
-    return /^[A-Za-zäüöß]*$/.test(str);
+    return /^[A-Za-zäüöß]*$/.test(str)
 }
 
 
