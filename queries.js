@@ -61,7 +61,7 @@ function getQuery(searchterm, lang, levenshtein_distance){
         let orquery = [ ]
         let addDe = (lang === 'de' || !lang)
         if (addDe)
-            orquery.push({search: qpPart(searchterm, 'meanings.ger[].text', levenshtein_distance), boost: [{ path:'meanings.ger[].rank', fun:rank=>10/rank }, { path:'commonness', fun:Math.log, param: 1}]})
+            orquery.push({search: qpPart(searchterm, 'meanings.ger[].text', levenshtein_distance), boost: [{ path:'meanings.ger[].rank', fun:rank => { if(!rank)return 0; return 10 / rank} }, { path:'commonness', fun:Math.log, param: 1}]})
 
         if (lang === 'en'|| !lang)
             orquery.push({search: qpPart(searchterm, 'meanings.eng[]', levenshtein_distance), boost: { path:'commonness', fun:Math.log, param: 1}})
@@ -83,17 +83,16 @@ function getQuery(searchterm, lang, levenshtein_distance){
 //     console.log(JSON.stringify(res[0], null, 2))
 // })
 
-findEntrys('kopf', 'de', 0, true).then(res => {
-    console.log(JSON.stringify(res[1], null, 2))
-})
+// findEntrys('haus', 'de', 0, true).then(res => {
+//     console.log(JSON.stringify(res[0], null, 2))
+// })
 
 // findEntrys('weich', 'de', 0, true).then(res => {
 //     console.log(JSON.stringify(res[0], null, 2))
 // })
 
-
 // findEntrys('fenster', 'de', 0, true).then(res => {
-//     // console.log(JSON.stringify(res[0], null, 2))
+//     console.log(JSON.stringify(res[0], null, 2))
 // })
 
 // findEntrys('とある', 'de', 0, true).then(res => {

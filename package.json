@@ -9,6 +9,6 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "serverless-search": "^1.0.17"
+    "serverless-search": "^1.0.20"
   }
 }
