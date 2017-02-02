@@ -61,7 +61,7 @@ function getQuery(searchterm, lang, levenshtein_distance){
         let orquery = [ ]
         let addDe = (lang === 'de' || !lang)
         if (addDe)
-            orquery.push({search: qpPart(searchterm, 'meanings.ger[]', levenshtein_distance), boost: { path:'commonness', fun:Math.log, param: 1}})
+            orquery.push({search: qpPart(searchterm, 'meanings.ger[].text', levenshtein_distance), boost: [{ path:'meanings.ger[].rank', fun:rank=>10/rank }, { path:'commonness', fun:Math.log, param: 1}]})
 
         if (lang === 'en'|| !lang)
             orquery.push({search: qpPart(searchterm, 'meanings.eng[]', levenshtein_distance), boost: { path:'commonness', fun:Math.log, param: 1}})
@@ -75,11 +75,21 @@ function getQuery(searchterm, lang, levenshtein_distance){
     }
 }
 
-// findEntrys('haus', true)
+// findEntrys(process.argv[2], undefined, 0, true).then(res => {
+//     console.log(JSON.stringify(res[4], null, 2))
+// })
 
-findEntrys('weich', 'de', 1, true).then(res => {
+// findEntrys('あたま', undefined, 0, true).then(res => {
+//     console.log(JSON.stringify(res[0], null, 2))
+// })
+
+findEntrys('kopf', 'de', 0, true).then(res => {
     console.log(JSON.stringify(res[1], null, 2))
 })
+
+// findEntrys('weich', 'de', 0, true).then(res => {
+//     console.log(JSON.stringify(res[0], null, 2))
+// })
 
 
 // findEntrys('fenster', 'de', 0, true).then(res => {
@@ -118,10 +128,12 @@ module.exports.search = (event, context, callback) => {
     console.log(request)
     // TODO implement
     findEntrys(request.searchterm, undefined, 0, request.printTime).then(entries => {
-
         let response = {
             "statusCode": 200,
-            "headers": { "Content-Type": "application/json; charset=utf-8" },
+            "headers": { 
+                "Content-Type": "application/json; charset=utf-8",
+                "Access-Control-Allow-Origin" : '*'  
+            },
             "body": JSON.stringify(entries)
         }
         console.log(response)

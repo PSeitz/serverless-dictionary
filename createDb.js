@@ -39,7 +39,8 @@ return database.createDatabaseFromFile('jmdict.json', 'jmdict',  [
     { fulltext:'kana[].text' }, 
     // { fulltext:'kana[].text' }, 
     // { fulltext:'kanji[].text' }, 
-    { fulltext:'meanings.ger[]', options:{tokenize:true} }, 
+    { fulltext:'meanings.ger[].text', options:{tokenize:true} }, 
+    { boost:'meanings.ger[].rank' , options:{type:'int'}}, 
     { fulltext:'meanings.eng[]', options:{tokenize:true} }, 
     { boost:'kanji[].commonness' , options:{type:'int'}}, 
     { boost:'kana[].commonness', options:{type:'int'} }

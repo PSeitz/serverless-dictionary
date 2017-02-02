@@ -53,6 +53,8 @@ package:
  exclude:
    - jmdict.json
    - de_50k.txt
+   - bundle.js
+   # - node_modules/**
 #    - exclude-me-dir/**
 
 
@@ -66,7 +68,10 @@ functions:
     memorySize: 128
     handler: queries.search
     events:
-      - http: GET search
+      - http: 
+          path: search
+          method: get
+          cors: true
     # events:
     #   - http:
     #       path: {search}
