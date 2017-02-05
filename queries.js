@@ -61,122 +61,204 @@ function getQuery(searchterm, lang, levenshtein_distance){
         let orquery = [ ]
         let addDe = (lang === 'de' || !lang)
         if (addDe)
-            orquery.push({search: qpPart(searchterm, 'meanings.ger[].text', levenshtein_distance), boost: [{ path:'meanings.ger[].rank', fun:rank => { if(!rank)return 0; return 10 / rank} }, { path:'commonness', fun:Math.log, param: 1}]})
+            orquery.push({search: qpPart(searchterm, 'meanings.ger[].text', levenshtein_distance), boost: [{ path:'meanings.ger[].rank', fun:rank => { if(!rank)return 0; return 10 / rank} }, { path:'commonness', fun:val => Math.log(val+.5)}]})
 
         if (lang === 'en'|| !lang)
             orquery.push({search: qpPart(searchterm, 'meanings.eng[]', levenshtein_distance), boost: { path:'commonness', fun:Math.log, param: 1}})
 
         if (addDe && hasUmlautLikeCharacter(searchterm.toLowerCase())){
             let converted = convertUmlautLikeCharacter(searchterm.toLowerCase())
-            orquery.push({search: qpPart(converted, 'meanings.ger[]', levenshtein_distance),
+            orquery.push({search: qpPart(converted, 'meanings.ger[].text', levenshtein_distance),
                 boost: { path:'commonness', fun:Math.log, param: 1}})
         }
         return {OR:orquery}
     }
 }
 
-// findEntrys(process.argv[2], undefined, 0, true).then(res => {
-//     console.log(JSON.stringify(res[4], null, 2))
-// })
+process.chdir(process.cwd()+'/'+'jmdict')
 
-// findEntrys('あたま', undefined, 0, true).then(res => {
+// findEntrys('あたま', {levenshtein_distance:0, printTime:true}).then(res => {
 //     console.log(JSON.stringify(res[0], null, 2))
 // })
 
-// findEntrys('haus', 'de', 0, true).then(res => {
+// findEntrys('glasscheibe', {lang:'de', levenshtein_distance:0, printTime:true}).then(res => {
+//     // console.log(JSON.stringify(res[0], null, 2))
+//     console.log(require('./jsontoyaml')(res[0]))
+// })
+
+// findEntrys(process.argv[2], {lang:'de', levenshtein_distance:0, printTime:true}).then(res => {
+//     console.log(JSON.stringify(res[process.argv[3]], null, 2))
+// })
+
+// findEntrys('fenster', {lang:'de', levenshtein_distance:0, printTime:true}).then(res => {
 //     console.log(JSON.stringify(res[0], null, 2))
 // })
 
-// findEntrys('weich', 'de', 0, true).then(res => {
-//     console.log(JSON.stringify(res[0], null, 2))
-// })
-
-// findEntrys('fenster', 'de', 0, true).then(res => {
-//     console.log(JSON.stringify(res[0], null, 2))
-// })
-
-// findEntrys('とある', 'de', 0, true).then(res => {
+// findEntrys('とある', {lang:'de', levenshtein_distance:0, printTime:true}).then(res => {
 //     console.log(JSON.stringify(res[0], null, 2))
 //     console.log(JSON.stringify(res[1], null, 2))
 // })
 
 
-function findEntrys(searchterm, lang, levenshtein_distance, printTime) {
+function findEntrys(searchterm, opt) {
     searchterm  = searchterm.trim()
     let startTime = process.hrtime()
 
     let searchDb = require('serverless-search').searchdb()
-    let query = getQuery(searchterm, lang, levenshtein_distance)
-
+    let query = getQuery(searchterm, opt.lang, opt.levenshtein_distance)
+    if(opt.top) query.top = opt.top
     return searchDb.searchDb('jmdict', query).then(function(res){
-        if (printTime)console.log('Query: ' +  process.hrtime(startTime)[1]/1000000 + ' ms.')
+        if (opt.printTime)console.log('Query: ' +  process.hrtime(startTime)[1]/1000000 + ' ms.')
         return res
     })
 }
 
-function getSuggestions(query) {
+function getSuggestions(searchterm, lang) {
+
+    let searchindex = require('serverless-search').searchindex()
+
+    // if (!process.cwd().endsWith('jmdict'))
+    //     process.chdir(process.cwd()+'/'+'jmdict')
+    if (containsKanji(searchterm)){
+        return searchindex.suggest({path:'kanji[].text', term:searchterm})
+    }else if(containsKana(searchterm)){
+        return searchindex.suggest({path:'kana[].text', term:searchterm})
+    }else {
+        if (lang === 'de')
+            return searchindex.suggest({path:'meanings.ger[].text', term:searchterm})
+
+        if (lang === 'en')
+            return searchindex.suggest({path:'meanings.eng[]', term:searchterm})
+    }
 }
 
+function corsReturn(entries, callback){
+    let response = {
+        "statusCode": 200,
+        "headers": { 
+            "Content-Type": "application/json; charset=utf-8",
+            "Access-Control-Allow-Origin" : '*'  
+        },
+        "body": JSON.stringify(entries)
+    }
+    console.log(response)
+    callback(null, response)
+}
 
+// global.suggest = module.exports.suggest = (event, context, callback) => {
 
-module.exports.search = (event, context, callback) => {
+// // exports.handler = (event, context, callback) => {
+//     let request = event.queryStringParameters
+//     console.log(request)
+//     getSuggestions(request.searchterm, request.lang || 'de').then(entries => {
+//         corsReturn(entries, callback)
+//     })
+// }
 
-// exports.handler = (event, context, callback) => {
-    console.log("jaaa suche kommt an!")
+global.search = module.exports.search = (event, context, callback) => {
+
     let request = event.queryStringParameters
     console.log(request)
     // TODO implement
-    findEntrys(request.searchterm, undefined, 0, request.printTime).then(entries => {
-        let response = {
-            "statusCode": 200,
-            "headers": { 
-                "Content-Type": "application/json; charset=utf-8",
-                "Access-Control-Allow-Origin" : '*'  
-            },
-            "body": JSON.stringify(entries)
-        }
-        console.log(response)
-        callback(null, response)
+
+    let prom = request.searchterm ? findEntrys(request.searchterm, {levenshtein_distance:1, printTime:true}) : getSuggestions(request.suggestterm, 'de')
+    prom.then(entries => {
+        corsReturn(entries, callback)
     })
+    // if (request.searchterm) {
+    //     findEntrys(request.searchterm, {levenshtein_distance:1, printTime:true}).then(entries => {
+    //         corsReturn(entries, callback)
+    //     })
+    // }else{
+    //     getSuggestions(request.suggestterm, 'de').then(entries => {
+    //         corsReturn(entries, callback)
+    //     })
+    // }
+
 }
 
+// KAUFEN SIE JETZT:  INTERGALAKTISCHE PROTONENGETRIEBENE ELEKTRISCHE WACKELARMWERBEDROIDEN AUF  INTERGALAKTISCHEPROTONENGETRIEBENEELEKTRISCHEWACKELARMWERBEDROIDEN.DE . INTERGALAKTISCHE PROTONENGETRIEBENE ELEKTRISCHE WACKELARMWERBEDROIDEN. DANKE! 
 
-module.exports.alexa = (event, context, callback) => {
-    const tehwort = event.request.intent.slots.tehwort.value
+global.alexa = module.exports.alexa = (event, context, callback) => {
 
-    findEntrys(tehwort, 'de', 0,  true).then(entries => {
-        if (entries.length === 0) {
-            const response = {
-                version: '1.0',
-                response: {
-                    outputSpeech: {
-                        type: 'PlainText',
-                        text: `zoory echt, ich hab nichts gefunden für ${tehwort}`
-                    },
+    // var Alexa = require('alexa-sdk')
+    // var alexa = Alexa.handler(event, context)
+    // var handlers = {
+
+    //     'LaunchRequest': function () {
+    //         // this.emit(':tell', 'Wörterbuch geladen. Bitte, bitte fragen sie mich was, okeh??')
+    //         this.emit(':ask', 'Was soll ich übersetzen?', 'Sage das Wort zum übersetzen')
+    //     },
+
+    //     'japanisch': function () {
+
+    //         const tehwort = event.request.intent.slots.tehwort.value
+    //         findEntrys(tehwort,  {lang:'de', levenshtein_distance:0, printTime:true, top:3}).then(entries => {
+    //             if (entries.length === 0) {
+    //                 this.emit(':tell', `zoory echt, ich hab nichts gefunden für ${tehwort}`)
+    //             }else {
+    //                 let japanisch = entries[0].kana[0].romaji
+    //                 japanisch = japanisch.toLowerCase()
+    //                 japanisch = japanisch.replace('ie', 'iä')
+    //                 japanisch = japanisch.replace('ji', 'dschy')
+    //                 console.log(entries[0])
+    //                 console.log(`${tehwort} auf japanisch ist: ${japanisch}. `)
+
+    //                 this.emit(':tellWithCard', `${tehwort} auf japanisch ist: ${japanisch}. `, `${entries[0].kanji[0].text}: ${tehwort}`, `${tehwort}: ${entries[0].kanji[0].text} -  ${japanisch} `)
+
+    //                 // this.emit(':tell', `${tehwort} auf japanisch ist: ${japanisch}. `)
+    //             }
+    //         })
+            
+    //     },
+
+    //     'SessionEndedRequest': function () {
+    //         this.emit(':tell', 'Tschausn!')
+    //     }
+
+    // }
+
+    // alexa.registerHandlers(handlers)
+    // alexa.execute()
+
+
+    function returnText(text, card){
+        const response = {
+            version: '1.0',
+            response: {
+                outputSpeech: {
+                    type: 'PlainText',
+                    text: text
                 },
-            }
-            callback(null, response)
-        }else {
-            let japanisch = entries[0].kana[0].romaji
-            japanisch = japanisch.toLowerCase()
-            japanisch = japanisch.replace('ie', 'iä')
-            japanisch = japanisch.replace('ji', 'dschy')
-            console.log(entries[0])
-            const response = {
-                version: '1.0',
-                response: {
-                    outputSpeech: {
-                        type: 'PlainText',
-                        text: `${tehwort} auf japanisch ist: ${japanisch}`
-                    },
-                },
-            }
-            console.log(response)
-            callback(null, response)
+            },
         }
-        
-        
-    })
+        if (card) response.card = { type: "Simple", title: card.title, content: card.content}
+
+        callback(null, response)
+    }
+
+
+    let request = event.request
+    if (request.type === "IntentRequest" ) {
+        const tehwort = event.request.intent.slots.tehwort.value
+        findEntrys(tehwort,  {lang:'de', levenshtein_distance:0, printTime:true, top:1}).then(entries => {
+            if (entries.length === 0) {
+                returnText(`zoory echt, ich hab nichts gefunden für ${tehwort}`)
+            }else {
+                let japanisch = entries[0].kana[0].romaji
+                japanisch = japanisch.toLowerCase()
+                japanisch = japanisch.replace('ie', 'iä')
+                japanisch = japanisch.replace('ji', 'dschy')
+                console.log(entries[0])
+                returnText(`${tehwort} auf japanisch ist: ${japanisch}. KAUFEN SIE JETZT:  INTERGALAKTISCHE PROTONENGETRIEBENE ELEKTRISCHE WACKELARMWERBEDROIDEN AUF  INTERGALAKTISCHEPROTONENGETRIEBENEELEKTRISCHEWACKELARMWERBEDROIDEN. D E . INTERGALAKTISCHE PROTONENGETRIEBENE ELEKTRISCHE WACKELARMWERBEDROIDEN!!!! DANKE! `,  { title: `${entries[0].kanji[0].text}: ${tehwort}`, content: `${tehwort}: ${entries[0].kanji[0].text} -  ${japanisch} `})
+            }
+        })
+    }else if (request.type === "LaunchRequest" ){
+        returnText('Wörterbuch geladen. Bitte, bitte fragen sie mich was, okeh??')
+    }else if (request.type === "SessionEndedRequest" ){
+        returnText('Sayoonara')
+    }
+
 }
 
 

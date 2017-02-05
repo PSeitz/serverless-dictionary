@@ -53,20 +53,21 @@ package:
  exclude:
    - jmdict.json
    - de_50k.txt
-   - bundle.js
-   # - node_modules/**
+   - goodwords
+   - node_modules/**
+   # - bundle.js
 #    - exclude-me-dir/**
 
 
 functions:
   mySkill:
     memorySize: 128
-    handler: queries.alexa
+    handler: start.alexa
     events:
       - alexaSkill
   search:
     memorySize: 128
-    handler: queries.search
+    handler: start.search
     events:
       - http: 
           path: search
